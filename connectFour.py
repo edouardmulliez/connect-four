@@ -4,9 +4,9 @@ Class to play at connect 4
 """
 
 # To do: 
-# - 1. improve function to compute grid value
+# Fix bug on alphabeta function for a specific grid
+# - 1. improve function to compute grid value (see has_rolling_count function)
 # - 2. Make it possible for the computer to be player 2
-# - 3. Implement alpha/beta to speed up minimax algo
 
 
 import numpy as np
@@ -67,6 +67,22 @@ def add_coin(grid, player, col):
     grid[row, col] = player
     return True
 
+def remove_coin(grid, col):
+    """
+    Remove last coin in col. Returns false if no coin can be removed.
+    Modifies grid inplace.
+    :param col: int between 0 and NCOL-1
+    """
+    assert(col in range(NCOL))
+    
+    if (grid[0, col] == 0):
+        return False    
+    # Find last non zero element in col
+    row = (grid[:,col] != 0).nonzero()[0][-1]
+    grid[row,col] = 0    
+    return True
+
+
 
 def get_max_alignment(l):
     """
@@ -125,6 +141,24 @@ for k, v in sequences[1].items():
     sequences[2][k] = [2*a for a in sequences[1][k]]
 # sequences[p][n] contains a list of array, each array representing a pattern 
 # to find n coins in a row for player p.
+
+
+# Perhaps to do: simplify fet_unit_value function.
+# Idea: instead of checking each patttern separately, count the number of 0/p on a rolling window.
+
+def has_rolling_count(line, counts={0: 1, 1: 3}, window=4):
+    """
+    Check if we can find window consecutive elements in line that respects the counts
+    indicated in dictionary counts.
+    For counts={0: 1, 1: 3} for example, we look for 4 consecutive elements: 0 once + 1 thrice
+    """
+    if len(line) < window:
+        return False
+    for i in range(len(line)- window + 1):
+        if all([sum(line[i:i+window] == k) == v for k,v in counts.items()]):
+            return True
+
+    return False
 
 
 def get_unit_value(line, p):
@@ -230,11 +264,10 @@ def get_next_col(grid, step=5):
     """
     Compute the next col where the computer should put the coin. Step is the number of
     moves that should be taken into account.
-    """
-    tree = Tree()
-    build_tree(grid, tree, (), 1, step=step)
-    col = minimax(tree, (), 1, grid)[0][0]
+    """    
+    col = alphabeta(grid, 1, -math.inf, math.inf, 0, step)[1]
     return col
+
 
 def build_grid(grid, node, player):
     """
@@ -282,7 +315,117 @@ def minimax(tree, node, level, grid):
     else:
         # Create grid with correct coins in it
         new_grid = build_grid(grid, node, 1)
-        return (node, grid_value(new_grid)/level)
+        return (node, grid_value(new_grid))
+
+
+## alphabeta function not simplified
+
+def alphabeta(grid, player, alpha, beta, depth, max_depth):
+    """
+    alphabeta is a more efficient application of minimax algo
+    The idea is to explore only the necessary branches of the minimax algo.
+    :param grid: current state of the grid
+    :param player: next player to play (used to know which type of coin is added next)
+    :param depth: current depth in the tree. Depth of tree root is 0.
+    :param max_depth: maximum depth in the tree (depth of the final leaves)
+    
+    alpha, beta are parameters to determine which branch should be cut off.
+    
+    Returns a tuple (value, col)
+    """
+    
+    custom_cols = [3,2,4,1,5,0,6]
+        
+    if (depth == max_depth) or has_winner(grid):
+        # Final leaf
+        return (grid_value(grid), None)
+        
+    best_col = None
+    
+    if depth % 2 == 1:
+        # Min node
+        v = math.inf
+        for col in custom_cols: #         for col in range(NCOL):
+            # update grid
+            if add_coin(grid, player, col):
+                ab = alphabeta(grid, 3-player, alpha, beta, depth+1, max_depth)[0]
+                if ab <= v:
+                    v = ab
+                    best_col = col
+                # put grid back to inital value
+                remove_coin(grid, col)
+                if alpha >= v:
+                    return (v, best_col)
+                beta = min(beta,v)
+    else:
+        # Max node
+        v = -math.inf
+        for col in custom_cols: #         for col in range(NCOL):
+            # update grid
+            if add_coin(grid, player, col):
+                ab = alphabeta(grid, 3-player, alpha, beta, depth+1, max_depth)[0]
+                if ab >= v:
+                    v = ab
+                    best_col = col
+                # put grid back to inital value
+                remove_coin(grid, col)
+                if v >= beta:
+                    return (v, best_col)
+                alpha = min(alpha,v)
+    
+#    if best_col is None:
+#        print("best_col; is None")
+#        print("depth: {}".format(depth))
+#        print("grid: {}".format(grid))
+#        print(f'value v: {v}')
+    
+    return (v, best_col)
+
+
+
+## 1 Understand why this grid produces an error for alphabeta function
+##| | | | | | | |
+##| | | | | | | |
+##| | | |O| | | |
+##| | | |O|O| | |
+##| | | |X|X| | |
+##|X| | |X|O| | |
+##---------------
+##|0|1|2|3|4|5|6|
+#    
+#grid = np.zeros((NROW,NCOL), dtype=int)
+#grid[0,0] = 1
+#grid[0:2,3] = 1
+#grid[1,4] = 1
+#
+#grid[0,4] = 2
+#grid[2,4] = 2
+#grid[2,3] = 2
+#grid[3,3] = 2
+#print_grid(grid)
+#get_next_col(grid)
+
+
+
+
+
+## Comparing execution time
+#start = timeit.default_timer()
+#grid = np.zeros((NROW,NCOL), dtype=int)
+#step = 6
+#test_alpha = alphabeta(grid, 1, -math.inf, math.inf, 0, step)
+#end = timeit.default_timer()
+#print(end - start)
+#
+#
+#start = timeit.default_timer()
+#grid = np.zeros((NROW,NCOL), dtype=int)
+#step = 5
+#tree = Tree()
+#build_tree(grid, tree, (), 1, step=step)
+#test = minimax(tree, (), 1, grid)
+#end = timeit.default_timer()
+#print(end - start)
 
 
 def play():
