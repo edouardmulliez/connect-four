@@ -18,6 +18,11 @@ import math
 NROW=6
 NCOL=7
 
+
+# Problem: I have to prioritize value of victory depending on how many tour it will be obtained.
+# Idea: put a big value for a vicotry. Divide value by depth in tree. Or substract -1.
+
+
 ## Create boolean arrays to easily select rows, columns, diagonals from the grid.
 def from_idx_to_mask(idx):
     """
@@ -443,7 +448,7 @@ def play():
             print('Computer computing next move...')
             col = get_next_col(grid)
         else:
-            prompt = 'Player {}, choose a column between 0 and {}: '.format(p, NCOL)
+            prompt = 'Player {}, choose a column between 0 and {}: '.format(p, NCOL-1)
             col = input(prompt)
             
             try:
