@@ -2,27 +2,22 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
-from kivy.uix.dropdown import DropDown
-from kivy.uix.slider import Slider
 from kivy.graphics import Color, Line, Rectangle, Ellipse
 from kivy.clock import Clock
 from kivy.lang import Builder
-
-import numpy as np
 
 
 from connectfour import ConnectFour
 
 
-# TO DO
-# Add possibility to choose:
-# - who starts
-# - level of computer
 
-# Try to refresh screen sooner
+
+# TO DO
+
+# - Put some functions in MyBox class instead of MyGrid (more logical)
 
 # Make popup to:
-# - Choose new game settings
+# - Choose new game settings (level of computer - who starts)
 # - Inform of game results
 
 
@@ -35,7 +30,6 @@ Builder.load_string('''
     MyGrid:
         id: grid
         size_hint_y: 1
-
     BoxLayout:
         id: commands
         orientation: 'horizontal'
@@ -47,10 +41,27 @@ Builder.load_string('''
             text: 'Start'
             size_hint_y: None
             height: '48dp'
-            on_press: root.start_stop_action()
+            on_press: root.start_button()
+        Spinner:
+            id: level_select
+            size_hint_y: None
+            height: '48dp'
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: None
+            height: '48dp'
+            ToggleButton:
+                text: 'Yes'
+                group: 'who_start'
+                state: 'down'
+            ToggleButton:
+                id: computer_starts
+                text: 'No'
+                group: 'who_start'
         Label:
             id: message
-            text: 'Hello'
+            text: ''
+    Popup
 ''')
 
 
@@ -73,47 +84,55 @@ class MyGrid(Widget):
             # Add coin
             if c4.get_state()==0 and c4.add_coin(col):
                 root.refresh()
+                self.check_game_end()
                 
                 if c4.get_state()==0:
                     # Computer plays
                     message.text = "Computer computing next move..."
                     print("Computer computing next move...")
-                    col = c4.get_next_col()
-                    print(f"Computer plays in column {col}")
-                    c4.add_coin(col)
-                    root.refresh()
-                    message.text = f"Computer played in column {col}"
-            
-            # Check if game is finished
-            state = c4.get_state()
-            if state != 0:
-                if state > 0:
-                    if root.computer_first:
-                        state = 3 - state
-                    if state == 1:
-                        message.text = 'You won!'
-                    else:
-                        message.text = 'You lost!'
+
+                    event = Clock.schedule_once(lambda dt: self.computer_plays(), 0)
                         
+
+    def computer_plays(self):
+        """
+        Compute next move for computer. Update canvas and label accordingly.
+        """
+        c4 = root.c4
+        message = root.ids['message']
+        col = c4.get_next_col()
+        print(f"Computer plays in column {col}")
+        c4.add_coin(col)
+        root.refresh()
+        message.text = f"Computer played in column {col}"
+        self.check_game_end()
+
+    
+    def check_game_end(self):
+        """
+        Check if game is finished. If finished, update label accordingly.
+        """
+        # Check if game is finished
+        c4 = root.c4
+        message = root.ids['message']
+        state = c4.get_state()
+        if state != 0:
+            if state > 0:
+                if root.computer_first:
+                    state = 3 - state
+                if state == 1:
+                    message.text = 'You won!'
                 else:
-                    message.text = 'Game over, no one won.'
-            
-            
-#            print(f'self.pos[0]: {self.pos[0]}')
-#            print(f'touch.x: {touch.x}')
-#            print(f'self.size[0]: {self.size[0]}')
-#            print(f'(touch.x-self.pos[0])/self.size[0] * NCOL: {(touch.x-self.pos[0])/self.size[0] * NCOL}')
-#            print(f'col: {col}')
+                    message.text = 'You lost!'
+                    
+            else:
+                message.text = 'Game over, no one won.'
+    
 
     def draw_tab(self, tab):
         """
         tab should be a numpy array with values 0,1,2
-        """
-        
-#        tab = np.zeros((6,7), dtype=int)
-#        tab[0,2]=1
-#        tab[1,2]=2
-        
+        """        
         # RGB colors
         COLORS = {'red': (0.83,0,0),
                   'yellow': (1, 0.8, 0),
@@ -151,24 +170,14 @@ class MyBox(BoxLayout):
     def __init__(self, **kwargs):
         super(MyBox, self).__init__(**kwargs)
         self.c4 = ConnectFour()
-        self.refresh()
         
+        spinner = self.ids['level_select']
+        levels = [k for k,v in self.c4.LEVELS]
+        spinner.text = self.c4.level_name
+        spinner.values = levels
         
-        self.cnt = 0
-        
-#        fps = 1
-#        self.event = Clock.schedule_interval(self.refresh, 1.0/fps)
-#        self.golife = Golife()
-#
-#        pattern_names = Golife.PATTERNS.keys()
-#        spinner = self.ids['pattern_select']
-#        spinner.text = pattern_names[0]
-#        spinner.values = pattern_names
-#        spinner.bind(text=self.set_pattern)
-#        self.set_pattern(spinner, spinner.text)
-#
-#        self.refresh()
-        
+        Clock.schedule_once(lambda dt: self.refresh())
+        self.start_button()        
   
     def refresh(self, *args):
         """
@@ -179,15 +188,21 @@ class MyBox(BoxLayout):
         grid_canvas.draw_tab(tab=self.c4.grid)
                 
 
-    def start_stop_action(self):
+    def start_button(self):
         """
         Deals with the start/stop button
         """
         self.c4.clear()
-        self.computer_first = True
+        self.ids['message'].text = ''
+        
+        # Update computer level depending on spinner value
+        level_name = self.ids['level_select'].text
+        self.c4.update_level(level_name)
+        
+        self.computer_first = self.ids['computer_starts'].state == 'down'
         
         if self.computer_first:
-            # If computer plays first
+            # computer plays first
             col = self.c4.get_next_col()
             self.c4.add_coin(col)
             

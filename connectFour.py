@@ -4,7 +4,7 @@ Class to play at connect 4
 """
 
 # To do: 
-# Build UI
+# 
 # 
 
 
@@ -320,7 +320,7 @@ def alphabeta(grid, player, alpha, beta, depth, max_depth):
     return (v, best_col)
 
 
-LEVELS = dict(zip([1,2,3,4], [3,4,5,6]))
+
 
 
 class ConnectFour:
@@ -329,11 +329,25 @@ class ConnectFour:
     Contains grid state and current player.
     """
     
+    LEVELS = list(zip(['Easy','Medium','Hard','Very Hard'], [3,4,5,6]))
     
     def __init__(self):
         self.grid = np.zeros((NROW,NCOL), dtype=int)
         self.player = 1 # next player to play
-        self.step = 4 # Number of steps considered by computer. 
+        self.update_level('Medium')
+
+        
+    def update_level(self, level_name):
+        """
+        Change step depending on level_name.
+        """
+        assert(level_name in [k for k,v in ConnectFour.LEVELS])
+        self.level_name = level_name
+        for k, v in ConnectFour.LEVELS:
+            if k==self.level_name:
+                self.step = v
+            
+
         
     def add_coin(self, col):
         """
