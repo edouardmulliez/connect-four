@@ -2,6 +2,7 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
+from kivy.uix.popup import Popup
 from kivy.graphics import Color, Line, Rectangle, Ellipse
 from kivy.clock import Clock
 from kivy.lang import Builder
@@ -22,6 +23,7 @@ from connectfour import ConnectFour
 
 
 Builder.load_string('''
+#:import Factory kivy.factory.Factory
 <MyBox>:
     id: box
     orientation: 'vertical'
@@ -37,19 +39,30 @@ Builder.load_string('''
         size_hint_y: None
         height: '48dp'
         Button:
-            id: start
-            text: 'Start'
-            size_hint_y: None
-            height: '48dp'
-            on_press: root.start_button()
-        Spinner:
-            id: level_select
-            size_hint_y: None
-            height: '48dp'
+            text: 'Start a new game'
+            on_release: root.open_popup()
+        Label:
+            id: message
+            text: ''
+
+<MyPopup>:
+    auto_dismiss: False
+    title: 'Game settings'
+    BoxLayout:
+        orientation: 'vertical'
+        
         BoxLayout:
             orientation: 'horizontal'
-            size_hint_y: None
-            height: '48dp'
+            Label:
+                text: 'Choose difficulty: '
+            Spinner:
+                id: level_select
+        
+        BoxLayout:
+            orientation: 'horizontal'
+            Label:
+                size_hint_x: 2.0
+                text: 'Do you want to play first?'
             ToggleButton:
                 text: 'Yes'
                 group: 'who_start'
@@ -58,10 +71,13 @@ Builder.load_string('''
                 id: computer_starts
                 text: 'No'
                 group: 'who_start'
-        Label:
-            id: message
-            text: ''
-    Popup
+        
+        Button:
+            id: start
+            text: 'Start a new game!'
+            on_release: root.start_button()
+
+
 ''')
 
 
@@ -165,19 +181,42 @@ class MyGrid(Widget):
         self.canvas.clear()
         
 
+class MyPopup(Popup):
+    
+    def __init__(self, levels, current_level, **kwargs):
+        """
+        Create the popup with a spinner with chosen levels
+        """
+        super(Popup, self).__init__(**kwargs)
+                
+        # Add diggiculty level to spinner
+        spinner = self.ids['level_select']
+        spinner.text = current_level
+        spinner.values = levels
+        
+    def start_button(self):
+        level = self.ids['level_select'].text
+        computer_first = self.ids['computer_starts'].state == 'down'
+        root.start_game(level, computer_first)
+        self.dismiss()
+        
+
 class MyBox(BoxLayout):
 
     def __init__(self, **kwargs):
         super(MyBox, self).__init__(**kwargs)
         self.c4 = ConnectFour()
         
-        spinner = self.ids['level_select']
-        levels = [k for k,v in self.c4.LEVELS]
-        spinner.text = self.c4.level_name
-        spinner.values = levels
+        # Bind touch on grid
+        grid = self.ids['grid']
+#        grid.bind(on_touch_down=self.on_anything)
         
-        Clock.schedule_once(lambda dt: self.refresh())
-        self.start_button()        
+        Clock.schedule_once(lambda dt: self.open_popup(), 0)
+        
+        
+    
+    
+    
   
     def refresh(self, *args):
         """
@@ -186,30 +225,30 @@ class MyBox(BoxLayout):
         grid_canvas = self.ids['grid']
         grid_canvas.clear_canvas()
         grid_canvas.draw_tab(tab=self.c4.grid)
-                
-
-    def start_button(self):
-        """
-        Deals with the start/stop button
-        """
+        
+        
+    def start_game(self, level, computer_first):
+        self.ids['message'].text = ''        
         self.c4.clear()
-        self.ids['message'].text = ''
-        
-        # Update computer level depending on spinner value
-        level_name = self.ids['level_select'].text
-        self.c4.update_level(level_name)
-        
-        self.computer_first = self.ids['computer_starts'].state == 'down'
+        self.c4.update_level(level)        
+        self.computer_first = computer_first        
+        self.refresh()
         
         if self.computer_first:
             # computer plays first
-            col = self.c4.get_next_col()
-            self.c4.add_coin(col)
+            event = Clock.schedule_once(lambda dt: self.ids['grid'].computer_plays(), 0)
             
-        self.refresh()
-            
-        
 
+            
+    def open_popup(self, *args):
+        """
+        Opens a popup to choose next game settings
+        """
+        levels = [k for k,v in self.c4.LEVELS]
+        current_level = self.c4.level_name
+                
+        self.popup = MyPopup(levels, current_level)
+        self.popup.open()
 
 
 class ConnectFourApp(App):
