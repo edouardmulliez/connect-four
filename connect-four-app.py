@@ -6,20 +6,21 @@ from kivy.uix.popup import Popup
 from kivy.graphics import Color, Line, Rectangle, Ellipse
 from kivy.clock import Clock
 from kivy.lang import Builder
-
+from kivy.animation import Animation
 
 from connectfour import ConnectFour
 
 
 
 
-# TO DO
+### TO DO ###
+# - Prevent touch during computation - Not done...
 
-# - Put some functions in MyBox class instead of MyGrid (more logical)
+# - Make animation for fall of coins, improve grid aspect, add image for grid
+# - Improve game setting popup appearance
 
-# Make popup to:
-# - Choose new game settings (level of computer - who starts)
-# - Inform of game results
+# - Put it on Android
+
 
 
 Builder.load_string('''
@@ -83,70 +84,10 @@ Builder.load_string('''
 
 class MyGrid(Widget):
 
-    def on_touch_down(self, touch):
-        """
-        Get click and add/remove point from tab.
-        """
-        if self.collide_point(*touch.pos):
-            # Click in the paint widget
-            
-            # Find corresponding column
-            NCOL = 7            
-            col = int((touch.x-self.pos[0])/self.size[0] * NCOL)
-                        
-            c4 = root.c4
-            message = root.ids['message']
-            
-            # Add coin
-            if c4.get_state()==0 and c4.add_coin(col):
-                root.refresh()
-                self.check_game_end()
-                
-                if c4.get_state()==0:
-                    # Computer plays
-                    message.text = "Computer computing next move..."
-                    print("Computer computing next move...")
-
-                    event = Clock.schedule_once(lambda dt: self.computer_plays(), 0)
-                        
-
-    def computer_plays(self):
-        """
-        Compute next move for computer. Update canvas and label accordingly.
-        """
-        c4 = root.c4
-        message = root.ids['message']
-        col = c4.get_next_col()
-        print(f"Computer plays in column {col}")
-        c4.add_coin(col)
-        root.refresh()
-        message.text = f"Computer played in column {col}"
-        self.check_game_end()
-
     
-    def check_game_end(self):
-        """
-        Check if game is finished. If finished, update label accordingly.
-        """
-        # Check if game is finished
-        c4 = root.c4
-        message = root.ids['message']
-        state = c4.get_state()
-        if state != 0:
-            if state > 0:
-                if root.computer_first:
-                    state = 3 - state
-                if state == 1:
-                    message.text = 'You won!'
-                else:
-                    message.text = 'You lost!'
-                    
-            else:
-                message.text = 'Game over, no one won.'
-    
-
     def draw_tab(self, tab):
         """
+        Draw a static image of the connect4, with coins placed according to tab.
         tab should be a numpy array with values 0,1,2
         """        
         # RGB colors
@@ -163,10 +104,16 @@ class MyGrid(Widget):
             1.0 * self.size[1]/tab.shape[0])
         coin_ratio = 0.8 # space used by a coin inside a square
         
+        self.clear_canvas()
+        
+        with self.canvas.after:
+#            # Grid image
+#            Color(*COLORS['blue'], mode='rgb')
+#            Rectangle(pos=self.pos, size=self.size)
+            Color(1.0,1.0,1.0, mode='rgb')
+            Rectangle(source='test-transparency.png', pos=self.pos, size=self.size)
+            
         with self.canvas:
-            # Background
-            Color(*COLORS['blue'], mode='rgb')
-            Rectangle(pos=self.pos, size=self.size)
             
             # Coins
             for row in range(tab.shape[0]):
@@ -176,9 +123,44 @@ class MyGrid(Widget):
                     Ellipse(pos=(self.pos[0] + sq_size[0] * (col + (1-coin_ratio)/2),
                                  self.pos[1] + sq_size[1] * (row + (1-coin_ratio)/2)),
                             size=(i*coin_ratio for i in sq_size))
+            
+#        self.fall_anim(3,3,2)
+            
+    def fall_anim(self, row, col, player, NROW=6,NCOL=7):
+        """
+        Animation of a coin of player whose final position is determined by row and col.
+        """
+        COLORS = {'red': (0.83,0,0),
+                  'yellow': (1, 0.8, 0),
+                  'blue': (0, 0, 0.6),
+                  'white': (1,1,1),
+                  'grey': (0.88, 0.88, 0.92)}
+        COIN_COLORS={0:'grey', 1:'red', 2:'yellow'}
+        
+        # Useful to find where to paint coins
+        sq_size = (
+            1.0 * self.size[0]/NCOL,
+            1.0 * self.size[1]/NROW)
+        coin_ratio = 0.8 # space used by a coin inside a square
+        
+        with self.canvas:
+            
+            color = COIN_COLORS[player]
+            Color(*COLORS[color], mode='rgb')
+            e = Ellipse(pos=(self.pos[0] + sq_size[0] * (col + (1-coin_ratio)/2),
+                         self.pos[1] + sq_size[1] * (NROW + (1-coin_ratio)/2)),
+                    size=(i*coin_ratio for i in sq_size))
+        
+        anim = Animation(pos=(self.pos[0] + sq_size[0] * (col + (1-coin_ratio)/2),
+                              self.pos[1] + sq_size[1] * (row + (1-coin_ratio)/2)),
+                         t='in_quad',
+                         duration = (NROW-row)/6)
+        anim.start(e)
+        
 
     def clear_canvas(self):
         self.canvas.clear()
+        self.canvas.after.clear()
         
 
 class MyPopup(Popup):
@@ -206,16 +188,83 @@ class MyBox(BoxLayout):
     def __init__(self, **kwargs):
         super(MyBox, self).__init__(**kwargs)
         self.c4 = ConnectFour()
+
+        self.block_touch = False
         
         # Bind touch on grid
         grid = self.ids['grid']
-#        grid.bind(on_touch_down=self.on_anything)
+        grid.bind(on_touch_down=self.on_grid_touch)
         
         Clock.schedule_once(lambda dt: self.open_popup(), 0)
         
+
+    def on_grid_touch(self, grid, touch):
+        '''
+        Deal with touch on grid.
+        '''
+                
+        if grid.collide_point(*touch.pos) and not self.block_touch:
+            # Click in the paint widget
+            
+            # Block touch
+            self.block_touch = True
+            # Find corresponding column
+            NCOL = 7            
+            col = int((touch.x-grid.pos[0])/grid.size[0] * NCOL)
+                        
+            c4 = self.c4
+            message = self.ids['message']
+            
+            # Add coin
+            if c4.get_state()==0 and c4.add_coin(col):
+                self.refresh()
+                self.check_game_end()
+                
+                if c4.get_state()==0:
+                    # Computer plays
+                    message.text = "Computer computing next move..."
+                    Clock.schedule_once(lambda dt: self.computer_plays(), 0)
+                    return True
+            
+            self.block_touch = False
+    
+    def unblock_touch(self):
+        self.block_touch = False
+
+    def check_game_end(self):
+        """
+        Check if game is finished. If finished, update label accordingly.
+        """
+        # Check if game is finished
+        message = self.ids['message']
+        state = self.c4.get_state()
+        if state != 0:
+            if state > 0:
+                if self.computer_first:
+                    state = 3 - state
+                if state == 1:
+                    message.text = 'You won!'
+                else:
+                    message.text = 'You lost!'
+                    
+            else:
+                message.text = 'Game over, no one won.'
+    
+    
+    def computer_plays(self):
+        """
+        Compute next move for computer. Update canvas and label accordingly.
+        """
+        c4 = self.c4
+        message = self.ids['message']
+        col = c4.get_next_col()
+        c4.add_coin(col)
+        self.refresh()
+        message.text = f"Computer played in column {col}"
+        self.check_game_end()
         
-    
-    
+        # unblock touch
+        Clock.schedule_once(lambda dt: self.unblock_touch(),0)
     
   
     def refresh(self, *args):
@@ -236,7 +285,7 @@ class MyBox(BoxLayout):
         
         if self.computer_first:
             # computer plays first
-            event = Clock.schedule_once(lambda dt: self.ids['grid'].computer_plays(), 0)
+            Clock.schedule_once(lambda dt: self.computer_plays(), 0)
             
 
             

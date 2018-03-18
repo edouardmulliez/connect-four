@@ -329,7 +329,8 @@ class ConnectFour:
     Contains grid state and current player.
     """
     
-    LEVELS = list(zip(['Easy','Medium','Hard','Very Hard'], [3,4,5,6]))
+#    LEVELS = list(zip(['Easy','Medium','Hard','Very Hard'], [3,4,5,6]))
+    LEVELS = list(zip(['Easy','Medium','Hard'], [3,4,5]))
     
     def __init__(self):
         self.grid = np.zeros((NROW,NCOL), dtype=int)
