@@ -126,9 +126,10 @@ class MyGrid(Widget):
             
 #        self.fall_anim(3,3,2)
             
-    def fall_anim(self, row, col, player, NROW=6,NCOL=7):
+    def fall_anim(self, row, col, player,  NROW=6,NCOL=7):
         """
         Animation of a coin of player whose final position is determined by row and col.
+        Return a tuple (anim, ellipse). To start the animation, do: "anim.start(ellipse)".
         """
         COLORS = {'red': (0.83,0,0),
                   'yellow': (1, 0.8, 0),
@@ -154,8 +155,9 @@ class MyGrid(Widget):
         anim = Animation(pos=(self.pos[0] + sq_size[0] * (col + (1-coin_ratio)/2),
                               self.pos[1] + sq_size[1] * (row + (1-coin_ratio)/2)),
                          t='in_quad',
-                         duration = (NROW-row)/6)
-        anim.start(e)
+                         duration = (NROW-row)/10)
+        return (anim, e)
+#        anim.start(e)
         
 
     def clear_canvas(self):
@@ -217,14 +219,21 @@ class MyBox(BoxLayout):
             
             # Add coin
             if c4.get_state()==0 and c4.add_coin(col):
-                self.refresh()
+                # Animation to make the coin fall
+                anim, e = grid.fall_anim(*c4.last_pos, 3-c4.player)
+
                 self.check_game_end()
                 
                 if c4.get_state()==0:
                     # Computer plays
                     message.text = "Computer computing next move..."
-                    Clock.schedule_once(lambda dt: self.computer_plays(), 0)
-                    return True
+                    # Without the inner schedule_once, the animation is blocked 
+                    # before completion
+                    anim.bind(on_complete=lambda x,y: 
+                        Clock.schedule_once(lambda dt: self.computer_plays(), 0))
+                                                        
+                anim.start(e)
+                return True
             
             self.block_touch = False
     
@@ -259,12 +268,21 @@ class MyBox(BoxLayout):
         message = self.ids['message']
         col = c4.get_next_col()
         c4.add_coin(col)
-        self.refresh()
+        
+        # Coin fall animation
+        anim, e = self.ids['grid'].fall_anim(*c4.last_pos, 3-c4.player)
+        # unblock touch        
+        anim.bind(on_complete=lambda x,y: 
+                        Clock.schedule_once(lambda dt: self.unblock_touch(), 0))
+            
+        anim.start(e)
+            
+#        self.refresh()
         message.text = f"Computer played in column {col}"
         self.check_game_end()
         
-        # unblock touch
-        Clock.schedule_once(lambda dt: self.unblock_touch(),0)
+#        # unblock touch
+#        Clock.schedule_once(lambda dt: self.unblock_touch(),0)
     
   
     def refresh(self, *args):

@@ -119,20 +119,6 @@ def has_winner(grid):
     return 0
         
 
-# Patterns to find in grid
-seq_3 = set(itertools.permutations([1,1,1,0], 4))
-seq_2 = set(itertools.permutations([1,1,0,0], 4))
-seq_1 = set(itertools.permutations([1,0,0,0], 4))
-sequences = {1: {1: seq_1, 2: seq_2, 3: seq_3},
-             2: {}}
-# Convert to array
-for k, v in sequences[1].items():
-    sequences[1][k] = [np.array(s) for s in v]
-    sequences[2][k] = [2*a for a in sequences[1][k]]
-# sequences[p][n] contains a list of array, each array representing a pattern 
-# to find n coins in a row for player p.
-
-
 WINDOW_MASK = np.ones(4,dtype=int)
 VICTORY_VALUE = 10**6
 def get_unit_value(line, p):
@@ -171,6 +157,20 @@ def grid_value(grid, player):
     return sum([get_unit_value(grid[u], player) for u in UNITS])
     
 
+
+## Patterns to find in grid
+#seq_3 = set(itertools.permutations([1,1,1,0], 4))
+#seq_2 = set(itertools.permutations([1,1,0,0], 4))
+#seq_1 = set(itertools.permutations([1,0,0,0], 4))
+#sequences = {1: {1: seq_1, 2: seq_2, 3: seq_3},
+#             2: {}}
+## Convert to array
+#for k, v in sequences[1].items():
+#    sequences[1][k] = [np.array(s) for s in v]
+#    sequences[2][k] = [2*a for a in sequences[1][k]]
+## sequences[p][n] contains a list of array, each array representing a pattern 
+## to find n coins in a row for player p.
+    
 #def get_unit_value(line, p):
 #    """
 #    Get the value of a given line (row,column or diagonal) for player p.
@@ -211,54 +211,6 @@ def get_next_col(grid, player, step=6):
     col = alphabeta(grid, player, -math.inf, math.inf, 0, step)[1]
     return col
 
-
-#def build_grid(grid, node, player):
-#    """
-#    Build a new grid by adding the elements of node in grid.
-#    Returns a new array.
-#    Player is the first player to add a coin.
-#    """    
-#    # to do: deal with player
-#    assert(player in [1,2])
-#    grid = grid.copy()
-#    for col in node:
-#        add_coin(grid, player, col)
-#        player = 3 - player
-#    return grid
-#    
-#
-## Apply minimax algo on Tree. Perhaps we need to apply a multiplier for grid values not on terminal nodes.
-## The closer it is to root, the more value (positive or negative) it has.
-#
-#def minimax(tree, node, level, grid):
-#    """
-#    We should begin with level 1 and node=()
-#    Returns a tuple (node, value)
-#    """
-#    
-#    # If node has children, take max or min depending on parity of level
-#    if len(tree[node]) > 0:
-#        
-#        if level == 1:
-#            # Randomly select one of the best nodes
-#            nodes = [(child, minimax(tree, child, level+1, grid)[1]) for child in tree[node]]
-#            max_value = max([v for k,v in nodes])
-#            nodes = [k for k,v in nodes if v==max_value]
-#            return (random.choice(nodes), max_value)
-#            
-#        if level % 2 == 1:
-##            return max([minimax(tree, child, level+1, grid) for child in tree[node]])
-#            return max([(child, minimax(tree, child, level+1, grid)[1]) for child in tree[node]],
-#                        key=lambda x: x[1])
-#        else:
-#            return min([(child, minimax(tree, child, level+1, grid)[1]) for child in tree[node]],
-#                        key=lambda x: x[1])
-#
-#    # Else, get the value of the grid.
-#    else:
-#        # Create grid with correct coins in it
-#        new_grid = build_grid(grid, node, 1)
-#        return (node, grid_value(new_grid))
 
 
 ## alphabeta function not simplified
@@ -336,6 +288,7 @@ class ConnectFour:
         self.grid = np.zeros((NROW,NCOL), dtype=int)
         self.player = 1 # next player to play
         self.update_level('Medium')
+        self.last_pos = None # Position of the last coin put.
 
         
     def update_level(self, level_name):
@@ -349,7 +302,6 @@ class ConnectFour:
                 self.step = v
             
 
-        
     def add_coin(self, col):
         """
         Add coin in column col for current player.
@@ -359,6 +311,9 @@ class ConnectFour:
         valid = add_coin(self.grid, self.player, col)
         if valid:
             self.player = 3 - self.player
+            # update last_pos
+            row = (self.grid[:,col] != 0).nonzero()[0][-1]
+            self.last_pos = (row, col)
         return valid
         
     def get_next_col(self):
