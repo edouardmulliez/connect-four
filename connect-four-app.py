@@ -3,10 +3,12 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
 from kivy.uix.popup import Popup
-from kivy.graphics import Color, Line, Rectangle, Ellipse
+from kivy.graphics import Color, Rectangle, Ellipse
 from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.animation import Animation
+
+#from kivy.core.audio import SoundLoader
 
 from connectfour import ConnectFour
 
@@ -14,11 +16,9 @@ from connectfour import ConnectFour
 
 
 ### TO DO ###
-# - Prevent touch during computation - Not done...
 
-# - Make animation for fall of coins, improve grid aspect, add image for grid
 # - Improve game setting popup appearance
-
+# - add coin sound - problems with sound loading... https://github.com/kivy/kivy/issues/5582
 # - Put it on Android
 
 
@@ -49,6 +49,7 @@ Builder.load_string('''
 <MyPopup>:
     auto_dismiss: False
     title: 'Game settings'
+    size_hint: (0.5,0.3)
     BoxLayout:
         orientation: 'vertical'
         
@@ -73,6 +74,19 @@ Builder.load_string('''
                 text: 'No'
                 group: 'who_start'
         
+        Button:
+            id: start
+            text: 'Start a new game!'
+            on_release: root.start_button()
+
+<EndPopup>:
+    auto_dismiss: False
+    title: ''
+    size_hint: (0.2,0.2)
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            id: message
         Button:
             id: start
             text: 'Start a new game!'
@@ -107,9 +121,7 @@ class MyGrid(Widget):
         self.clear_canvas()
         
         with self.canvas.after:
-#            # Grid image
-#            Color(*COLORS['blue'], mode='rgb')
-#            Rectangle(pos=self.pos, size=self.size)
+            # Grid image 
             Color(1.0,1.0,1.0, mode='rgb')
             Rectangle(source='test-transparency.png', pos=self.pos, size=self.size)
             
@@ -156,6 +168,11 @@ class MyGrid(Widget):
                               self.pos[1] + sq_size[1] * (row + (1-coin_ratio)/2)),
                          t='in_quad',
                          duration = (NROW-row)/10)
+        
+#        # Play a coin drop sound when animation starts
+#        sound = SoundLoader.load('pin_dropping.ogg')
+#        anim.bind(on_start=lambda x,y: sound.play())
+        
         return (anim, e)
 #        anim.start(e)
         
@@ -166,31 +183,49 @@ class MyGrid(Widget):
         
 
 class MyPopup(Popup):
+    """
+    Create the popup to choose game settings (difficulty and who starts)
+    """
     
     def __init__(self, levels, current_level, **kwargs):
-        """
-        Create the popup with a spinner with chosen levels
-        """
         super(Popup, self).__init__(**kwargs)
-                
+        
         # Add diggiculty level to spinner
         spinner = self.ids['level_select']
         spinner.text = current_level
         spinner.values = levels
-        
+                
     def start_button(self):
         level = self.ids['level_select'].text
         computer_first = self.ids['computer_starts'].state == 'down'
         root.start_game(level, computer_first)
         self.dismiss()
-        
+     
+class EndPopup(Popup):
+    '''
+    Create popup to inform of game results.
+    '''
 
+    def __init__(self, winner, **kwargs):
+        assert(winner in ['computer','player','equality'])
+        super(Popup, self).__init__(**kwargs)
+        d = {'computer': 'You lost!',
+             'player': 'You are the winner!',
+             'equality': 'Equality ... '}
+        self.ids['message'].text = d[winner]
+        
+#        self.ids['start'].bind(on_press=self.start_button)
+
+    def start_button(self, *args):
+        self.dismiss()
+        root.open_popup()
+        
 class MyBox(BoxLayout):
 
     def __init__(self, **kwargs):
         super(MyBox, self).__init__(**kwargs)
         self.c4 = ConnectFour()
-
+        
         self.block_touch = False
         
         # Bind touch on grid
@@ -244,20 +279,36 @@ class MyBox(BoxLayout):
         """
         Check if game is finished. If finished, update label accordingly.
         """
+#        # Check if game is finished
+#        message = self.ids['message']
+#        state = self.c4.get_state()
+#        if state != 0:
+#            if state > 0:
+#                if self.computer_first:
+#                    state = 3 - state
+#                if state == 1:
+#                    message.text = 'You won!'
+#                else:
+#                    message.text = 'You lost!'
+#                    
+#            else:
+#                message.text = 'Game over, no one won.'
+                
         # Check if game is finished
-        message = self.ids['message']
         state = self.c4.get_state()
         if state != 0:
             if state > 0:
                 if self.computer_first:
                     state = 3 - state
                 if state == 1:
-                    message.text = 'You won!'
+                    winner = 'player'
                 else:
-                    message.text = 'You lost!'
-                    
+                    winner = 'computer'                    
             else:
-                message.text = 'Game over, no one won.'
+                winner = 'equality'
+
+            self.open_end_popup(winner)
+
     
     
     def computer_plays(self):
@@ -271,19 +322,14 @@ class MyBox(BoxLayout):
         
         # Coin fall animation
         anim, e = self.ids['grid'].fall_anim(*c4.last_pos, 3-c4.player)
-        # unblock touch        
+        # unblock touch once animation is finished
         anim.bind(on_complete=lambda x,y: 
-                        Clock.schedule_once(lambda dt: self.unblock_touch(), 0))
-            
+                        Clock.schedule_once(lambda dt: self.unblock_touch(), 0))   
         anim.start(e)
             
-#        self.refresh()
         message.text = f"Computer played in column {col}"
         self.check_game_end()
-        
-#        # unblock touch
-#        Clock.schedule_once(lambda dt: self.unblock_touch(),0)
-    
+            
   
     def refresh(self, *args):
         """
@@ -305,17 +351,31 @@ class MyBox(BoxLayout):
             # computer plays first
             Clock.schedule_once(lambda dt: self.computer_plays(), 0)
             
-
+    def clear(self):
+        """
+        Remove coins, message from main window.
+        """
+        self.ids['message'].text = ''        
+        self.c4.clear()
+        self.refresh()
+        
             
     def open_popup(self, *args):
         """
         Opens a popup to choose next game settings
         """
+        # Clear grid and message
+        self.clear()
+        
         levels = [k for k,v in self.c4.LEVELS]
         current_level = self.c4.level_name
-                
         self.popup = MyPopup(levels, current_level)
         self.popup.open()
+        
+    def open_end_popup(self, winner):
+        popup = EndPopup(winner)
+        popup.open()
+        
 
 
 class ConnectFourApp(App):

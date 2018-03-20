@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Sun Mar 18 00:37:23 2018
@@ -11,8 +10,8 @@ import numpy as np
 from skimage.draw import ellipse
 
 # Image size
-width = 640
-height = 480
+width = 1280
+height = 960
 channels = 4
 
 NCOL = 7
