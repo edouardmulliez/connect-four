@@ -1,8 +1,8 @@
 # Install requiered packages
 brew install mercurial sdl sdl_image sdl_mixer sdl_ttf portmidi
 
-# to play sounds
-brew install gst-plugins-bad
+# # to play sounds - not working finally
+# brew install gst-plugins-bad
 
 # Install smpeg package via another brew tap
 brew tap homebrew/headonly

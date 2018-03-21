@@ -36,7 +36,7 @@ for row in range(NROW):
         img[rr,cc,3] = 0
         
 # Save the image
-scipy.misc.imsave("test-transparency.png", img)
+scipy.misc.imsave("grid.png", img)
 
 
 

@@ -123,7 +123,7 @@ class MyGrid(Widget):
         with self.canvas.after:
             # Grid image 
             Color(1.0,1.0,1.0, mode='rgb')
-            Rectangle(source='test-transparency.png', pos=self.pos, size=self.size)
+            Rectangle(source='grid.png', pos=self.pos, size=self.size)
             
         with self.canvas:
             
@@ -231,6 +231,7 @@ class MyBox(BoxLayout):
         # Bind touch on grid
         grid = self.ids['grid']
         grid.bind(on_touch_down=self.on_grid_touch)
+        grid.bind(size=self.refresh)
         
         Clock.schedule_once(lambda dt: self.open_popup(), 0)
         
@@ -337,8 +338,7 @@ class MyBox(BoxLayout):
         """
         grid_canvas = self.ids['grid']
         grid_canvas.clear_canvas()
-        grid_canvas.draw_tab(tab=self.c4.grid)
-        
+        grid_canvas.draw_tab(tab=self.c4.grid)        
         
     def start_game(self, level, computer_first):
         self.ids['message'].text = ''        
