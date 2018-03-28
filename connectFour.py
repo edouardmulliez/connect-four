@@ -3,10 +3,6 @@
 Class to play at connect 4
 """
 
-# To do: 
-# 
-# 
-
 
 import numpy as np
 import itertools
