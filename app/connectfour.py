@@ -3,7 +3,6 @@
 Class to play at connect 4
 """
 
-
 import numpy as np
 import itertools
 import math
@@ -151,52 +150,6 @@ def grid_value(grid, player):
     Evaluate the value of a given grid for player.
     """
     return sum([get_unit_value(grid[u], player) for u in UNITS])
-    
-
-
-## Patterns to find in grid
-#seq_3 = set(itertools.permutations([1,1,1,0], 4))
-#seq_2 = set(itertools.permutations([1,1,0,0], 4))
-#seq_1 = set(itertools.permutations([1,0,0,0], 4))
-#sequences = {1: {1: seq_1, 2: seq_2, 3: seq_3},
-#             2: {}}
-## Convert to array
-#for k, v in sequences[1].items():
-#    sequences[1][k] = [np.array(s) for s in v]
-#    sequences[2][k] = [2*a for a in sequences[1][k]]
-## sequences[p][n] contains a list of array, each array representing a pattern 
-## to find n coins in a row for player p.
-    
-#def get_unit_value(line, p):
-#    """
-#    Get the value of a given line (row,column or diagonal) for player p.
-#    We take into account possible alignments of 1, 2, 3 or 4 coins.
-#    """
-#    if (line != p).all():
-#        return 0
-#    if get_max_alignment(line==p) >= 4:
-#        # Victory
-#        return VICTORY_VALUE
-#    
-#    for n in range(3,0,-1):
-#        # Look for sequences with n coins
-#        for s in sequences[p][n]:
-#            if is_seq_in_array(line, s):
-#                return 10**(n-1)
-#    return 0
-#
-#
-#
-#def grid_value(grid):
-#    """
-#    Evaluate the value of a given grid for the player 1.
-#    """
-#    
-#    value = sum([get_unit_value(grid[u], 1) for u in UNITS])
-#    value -= sum([get_unit_value(grid[u], 2) for u in UNITS])
-#    
-#    return value
-    
 
 
 def get_next_col(grid, player, step=6):

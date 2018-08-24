@@ -1,3 +1,5 @@
+__version__ = '1.0.0'
+
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
@@ -8,19 +10,7 @@ from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.animation import Animation
 
-#from kivy.core.audio import SoundLoader
-
 from connectfour import ConnectFour
-
-
-
-
-### TO DO ###
-
-# - Improve game setting popup appearance
-# - add coin sound - problems with sound loading... https://github.com/kivy/kivy/issues/5582
-# - Put it on Android
-
 
 
 Builder.load_string('''
@@ -136,7 +126,6 @@ class MyGrid(Widget):
                                  self.pos[1] + sq_size[1] * (row + (1-coin_ratio)/2)),
                             size=(i*coin_ratio for i in sq_size))
             
-#        self.fall_anim(3,3,2)
             
     def fall_anim(self, row, col, player,  NROW=6,NCOL=7):
         """
@@ -168,13 +157,8 @@ class MyGrid(Widget):
                               self.pos[1] + sq_size[1] * (row + (1-coin_ratio)/2)),
                          t='in_quad',
                          duration = (NROW-row)/10)
-        
-#        # Play a coin drop sound when animation starts
-#        sound = SoundLoader.load('pin_dropping.ogg')
-#        anim.bind(on_start=lambda x,y: sound.play())
-        
+                
         return (anim, e)
-#        anim.start(e)
         
 
     def clear_canvas(self):
@@ -214,7 +198,6 @@ class EndPopup(Popup):
              'equality': 'Equality ... '}
         self.ids['message'].text = d[winner]
         
-#        self.ids['start'].bind(on_press=self.start_button)
 
     def start_button(self, *args):
         self.dismiss()
@@ -280,21 +263,6 @@ class MyBox(BoxLayout):
         """
         Check if game is finished. If finished, update label accordingly.
         """
-#        # Check if game is finished
-#        message = self.ids['message']
-#        state = self.c4.get_state()
-#        if state != 0:
-#            if state > 0:
-#                if self.computer_first:
-#                    state = 3 - state
-#                if state == 1:
-#                    message.text = 'You won!'
-#                else:
-#                    message.text = 'You lost!'
-#                    
-#            else:
-#                message.text = 'Game over, no one won.'
-                
         # Check if game is finished
         state = self.c4.get_state()
         if state != 0:
@@ -328,7 +296,7 @@ class MyBox(BoxLayout):
                         Clock.schedule_once(lambda dt: self.unblock_touch(), 0))   
         anim.start(e)
             
-        message.text = f"Computer played in column {col}"
+        message.text = "Computer played in column {}".format(col)
         self.check_game_end()
             
   
