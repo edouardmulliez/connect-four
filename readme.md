@@ -2,23 +2,11 @@
 
 ## About the application
 
-This app is a game of Connect Four, where the player plays against the computer. Different level of difficulty can be chosen.
-It is written in Python3, using the Kivy for the interface.
+This app is a game of Connect Four, where the player plays against the computer. Different levels of difficulty can be chosen.
+The app is written in Python 3, using the Kivy for the interface.
 
-## Installation
+With it, you can create an Android application, using buildozer module.
 
-You will need an environment with Python 3 and Kivy installed. Instructions to install Kivy can be found [here](https://kivy.org/docs/installation/installation.html).
-
-On OSX, you can use the file `install_kivy.sh` of this repository. You will however need to have [homebrew](https://brew.sh/index_fr) installed beforehand.
-
-## Running the app
-
-To start the app, in Terminal, type:
-
-```bash
-cd connect-four
-python connect-four-app.py
-```
 
 ## Application screenshots
 
@@ -33,6 +21,34 @@ python connect-four-app.py
 **Game results**:
 
 ![results](screenshots/results.png)
+
+
+## Installation
+
+You will need an environment with Python 3 and Kivy installed. Instructions to install Kivy can be found [here](https://kivy.org/docs/installation/installation.html).
+
+
+## Running the app on your computer
+
+To start the app, in Terminal, type:
+
+```bash
+cd connect-four
+python connect-four-app.py
+```
+
+## Creating an APK file (Android application)
+Here are the instructions to create an Android application for this App.
+
+We'll be using python 3, so follow the installation instruction here: [Installing buildozer with Python 3 support](https://github.com/kivy/buildozer#installing-buildozer-with-python3-support).
+At the time of writting, there is no valid recipe in python4android for numpy with Python 3.6 ([Numpy support](https://github.com/kivy/python-for-android/issues/882)). So you'll need to add a custom local recipe for numpy. @krinnewitz built one [here](https://github.com/kivy/python-for-android/issues/882). I put this recipe in `~/.buildozer/p4a/p4a-numpy/recipes`.
+
+Once you've put the CrystaxNDK in `~/.buildozer` and the numpy recipe in `~/.buildozer/p4a/p4a-numpy/recipes`, you can build the APK file:
+
+```bash
+cd app 
+buildozer android debug deploy run
+```
 
 ## How does it work?
 

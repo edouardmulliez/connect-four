@@ -11,7 +11,7 @@ from kivy.lang import Builder
 from kivy.animation import Animation
 
 from connectfour import ConnectFour
-
+from get_image_size import get_image_size # get image size with minimal dependencies
 
 Builder.load_string('''
 #:import Factory kivy.factory.Factory
@@ -20,9 +20,13 @@ Builder.load_string('''
     orientation: 'vertical'
     padding: [4,4,4,4]
     spacing: 4
-    MyGrid:
-        id: grid
-        size_hint_y: 1
+    AnchorLayout:
+        id: grid_container
+        anchor_x: 'center'
+        anchor_y: 'center'
+        MyGrid:
+            id: grid
+            size_hint_x: 0.7
     BoxLayout:
         id: commands
         orientation: 'horizontal'
@@ -32,20 +36,23 @@ Builder.load_string('''
         Button:
             text: 'Start a new game'
             on_release: root.open_popup()
+            size_hint_x: 0.3
         Label:
             id: message
             text: ''
+            size_hint_x: 0.7
 
 <MyPopup>:
     auto_dismiss: False
     title: 'Game settings'
-    size_hint: (0.5,0.3)
+    size_hint: (0.7,0.5)
     BoxLayout:
         orientation: 'vertical'
         
         BoxLayout:
             orientation: 'horizontal'
             Label:
+                size_hint_x: 2.0
                 text: 'Choose difficulty: '
             Spinner:
                 id: level_select
@@ -56,10 +63,12 @@ Builder.load_string('''
                 size_hint_x: 2.0
                 text: 'Do you want to play first?'
             ToggleButton:
+                size_hint_x: 0.5
                 text: 'Yes'
                 group: 'who_start'
                 state: 'down'
             ToggleButton:
+                size_hint_x: 0.5
                 id: computer_starts
                 text: 'No'
                 group: 'who_start'
@@ -72,7 +81,7 @@ Builder.load_string('''
 <EndPopup>:
     auto_dismiss: False
     title: ''
-    size_hint: (0.2,0.2)
+    size_hint: (0.4,0.3)
     BoxLayout:
         orientation: 'vertical'
         Label:
@@ -81,10 +90,12 @@ Builder.load_string('''
             id: start
             text: 'Start a new game!'
             on_release: root.start_button()
-
-
 ''')
 
+
+GRID_IMAGE_PATH = 'grid.png'
+image_size = get_image_size(GRID_IMAGE_PATH)
+IMAGE_RATIO = image_size[0] / image_size[1]
 
 class MyGrid(Widget):
 
@@ -95,12 +106,15 @@ class MyGrid(Widget):
         tab should be a numpy array with values 0,1,2
         """        
         # RGB colors
-        COLORS = {'red': (0.83,0,0),
+        COLORS = {
+                # 'red': (0.83,0,0),
+                'red': (0.66,0.07,0.07),
                   'yellow': (1, 0.8, 0),
                   'blue': (0, 0, 0.6),
                   'white': (1,1,1),
-                  'grey': (0.88, 0.88, 0.92)}
-        COIN_COLORS={0:'grey', 1:'red', 2:'yellow'}
+                  'grey': (0.88, 0.88, 0.92),
+                  'black': (0.0, 0.0, 0.0)}
+        COIN_COLORS={0:'black', 1:'red', 2:'yellow'}
         
         # Useful to find where to paint coins
         sq_size = (
@@ -109,14 +123,14 @@ class MyGrid(Widget):
         coin_ratio = 0.8 # space used by a coin inside a square
         
         self.clear_canvas()
-        
+
         with self.canvas.after:
             # Grid image 
             Color(1.0,1.0,1.0, mode='rgb')
-            Rectangle(source='grid.png', pos=self.pos, size=self.size)
+            Rectangle(source=GRID_IMAGE_PATH, pos=self.pos, size=self.size)
             
+
         with self.canvas:
-            
             # Coins
             for row in range(tab.shape[0]):
                 for col in range(tab.shape[1]):
@@ -130,13 +144,15 @@ class MyGrid(Widget):
     def fall_anim(self, row, col, player,  NROW=6,NCOL=7):
         """
         Animation of a coin of player whose final position is determined by row and col.
-        Return a tuple (anim, ellipse). To start the animation, do: "anim.start(ellipse)".
         """
-        COLORS = {'red': (0.83,0,0),
-                  'yellow': (1, 0.8, 0),
+        COLORS = {
+                # 'red': (0.83,0,0),
+                'red': (0.71,0.03,0.03),
+                  'yellow': (0.85, 0.65, 0.07),
                   'blue': (0, 0, 0.6),
                   'white': (1,1,1),
-                  'grey': (0.88, 0.88, 0.92)}
+                  'grey': (0.88, 0.88, 0.92),
+                  'black': (0.0, 0.0, 0.0)}
         COIN_COLORS={0:'grey', 1:'red', 2:'yellow'}
         
         # Useful to find where to paint coins
@@ -150,8 +166,8 @@ class MyGrid(Widget):
             color = COIN_COLORS[player]
             Color(*COLORS[color], mode='rgb')
             e = Ellipse(pos=(self.pos[0] + sq_size[0] * (col + (1-coin_ratio)/2),
-                         self.pos[1] + sq_size[1] * (NROW + (1-coin_ratio)/2)),
-                    size=(i*coin_ratio for i in sq_size))
+                             self.pos[1] + sq_size[1] * (NROW + (1-coin_ratio)/2)),
+                        size=(i*coin_ratio for i in sq_size))
         
         anim = Animation(pos=(self.pos[0] + sq_size[0] * (col + (1-coin_ratio)/2),
                               self.pos[1] + sq_size[1] * (row + (1-coin_ratio)/2)),
@@ -174,7 +190,7 @@ class MyPopup(Popup):
     def __init__(self, levels, current_level, **kwargs):
         super(Popup, self).__init__(**kwargs)
         
-        # Add diggiculty level to spinner
+        # Add difficulty level to spinner
         spinner = self.ids['level_select']
         spinner.text = current_level
         spinner.values = levels
@@ -215,9 +231,26 @@ class MyBox(BoxLayout):
         grid = self.ids['grid']
         grid.bind(on_touch_down=self.on_grid_touch)
         grid.bind(size=self.refresh)
+
+        # Adapt size of the grid, so that the aspect ratio of the image is kept
+        self.ids['grid_container'].bind(size=self.resize_grid)
         
         Clock.schedule_once(lambda dt: self.open_popup(), 0)
         
+
+    def resize_grid(self, grid_container, *args):
+        # Adapt size of the grid, so that the aspect ratio of the image is kept
+        container_size_x, container_size_y = self.ids['grid_container'].size
+        container_ratio = container_size_x / container_size_y
+        grid = self.ids['grid']
+        if container_ratio > IMAGE_RATIO:
+            # container is larger than the image
+            grid.size_hint_x = IMAGE_RATIO / container_ratio
+            grid.size_hint_y = 1
+        else:
+            grid.size_hint_x = 1
+            grid.size_hint_y = container_ratio / IMAGE_RATIO
+
 
     def on_grid_touch(self, grid, touch):
         '''
@@ -227,7 +260,7 @@ class MyBox(BoxLayout):
         if grid.collide_point(*touch.pos) and not self.block_touch:
             # Click in the paint widget
             
-            # Block touch
+            # Block touch (until computer finished playing next move)
             self.block_touch = True
             # Find corresponding column
             NCOL = 7            
@@ -236,7 +269,7 @@ class MyBox(BoxLayout):
             c4 = self.c4
             message = self.ids['message']
             
-            # Add coin
+            # It's the player turn to play and a coin can be added in the selected column
             if c4.get_state()==0 and c4.add_coin(col):
                 # Animation to make the coin fall
                 anim, e = grid.fall_anim(*c4.last_pos, 3-c4.player)
@@ -309,6 +342,11 @@ class MyBox(BoxLayout):
         grid_canvas.draw_tab(tab=self.c4.grid)        
         
     def start_game(self, level, computer_first):
+
+
+        print(f'Starting a new game, computer first: {computer_first}')
+
+
         self.ids['message'].text = ''        
         self.c4.clear()
         self.c4.update_level(level)        
@@ -318,6 +356,9 @@ class MyBox(BoxLayout):
         if self.computer_first:
             # computer plays first
             Clock.schedule_once(lambda dt: self.computer_plays(), 0)
+        else:
+            # Unblock touch on grid so that player can play
+            self.unblock_touch()
             
     def clear(self):
         """
