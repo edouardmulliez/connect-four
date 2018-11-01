@@ -4,9 +4,7 @@ Class to play at connect 4
 """
 
 import numpy as np
-import itertools
 import math
-
 
 NROW=6
 NCOL=7
@@ -242,7 +240,8 @@ class ConnectFour:
         
     def update_level(self, level_name):
         """
-        Change step depending on level_name.
+        Change step number depending on level_name. step is the number of moves 
+        evaluated by the computer to choose its next move.
         """
         assert(level_name in [k for k,v in ConnectFour.LEVELS])
         self.level_name = level_name
@@ -290,63 +289,3 @@ class ConnectFour:
         self.player = 1
 
 
-def play():
-    """
-    Ask each player to play in succession, by indicating the chosen column.
-    """
-    # initialize grid
-    grid = np.zeros((NROW,NCOL), dtype=int)
-    p = 1
-    
-    
-    # Choose first player
-    first=''
-    while first not in ['y','n']:
-        first = input('Do you want to play first? (y/n): ')
-    computer = 2 if first=='y' else 1
-    
-    # Choose level
-    level_names = LEVELS.keys()
-    level = -1
-    while level not in level_names:
-        level = input('Choose a level of difficulty (between 1 and 4): ')
-        try:
-            level = int(level)
-            assert(level in level_names)
-        except ValueError:
-            print("Please enter an integer between 1 and 4!")
-            continue
-    step = LEVELS[level]
-    
-    while (has_winner(grid) == 0 and (grid == 0).any()):
-        print_grid(grid)
-        
-        if p==computer:
-            # Computer plays 
-            print('Computer computing next move...')
-            col = get_next_col(grid, p, step=step)
-        else:
-            prompt = 'Player {}, choose a column between 0 and {}: '.format(p, NCOL-1)
-            col = input(prompt)
-            
-            try:
-                col = int(col)
-            except ValueError:
-                print("Please enter an integer!")
-                continue
-        
-        if add_coin(grid, p, col):
-            # Possible column, change player
-            p = 3 - p 
-        else:
-            # Impossible column, try again
-            print("You can't choose column {}".format(col))
-    
-    print_grid(grid)
-    winner = has_winner(grid)
-    if winner == 0:
-        print('Equality!')
-    elif winner==computer:
-        print('Computer wins!')
-    else:
-        print('You are the winner!')

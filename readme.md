@@ -2,8 +2,8 @@
 
 ## About the application
 
-This app is a game of Connect Four, where the player plays against the computer. Different levels of difficulty can be chosen.
-The app is written in Python 3, using the Kivy for the interface.
+This app is a game of **Connect Four**, where the player plays against the computer. Different levels of difficulty can be chosen.
+It is written in **Python 3**, using **Kivy** for the interface.
 
 With it, you can create an Android application, using buildozer module.
 
@@ -23,12 +23,16 @@ With it, you can create an Android application, using buildozer module.
 ![results](screenshots/results.png)
 
 
+
 ## Installation
 
 You will need an environment with Python 3 and Kivy installed. Instructions to install Kivy can be found [here](https://kivy.org/docs/installation/installation.html).
 
+```bash
+./install_kivy.sh
+```
 
-## Running the app on your computer
+## Running the app
 
 To start the app, in Terminal, type:
 
